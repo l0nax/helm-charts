@@ -20,11 +20,23 @@ spec:
   {{- if .Values.prometheus.monitor.interval }}
       interval: {{ .Values.prometheus.monitor.interval }}
   {{- end }}
+  {{- with .Values.prometheus.monitor.metricRelabelings }}
+      metricRelabelings:
+        {{- toYaml . | nindent 6 }}
+  {{- end }}
+  {{- with .Values.prometheus.monitor.relabelings }}
+      relabelings:
+        {{- toYaml . | nindent 6 }}
+  {{- end }}
   {{- if .Values.prometheus.monitor.namespace }}
   namespaceSelector:
     matchNames:
     {{- range .Values.prometheus.monitor.namespace }}
     - {{ . }}
     {{- end }}
+  {{- with .Values.prometheus.monitor.targetLabels }}
+  targetLabels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- end }}
 {{- end }}

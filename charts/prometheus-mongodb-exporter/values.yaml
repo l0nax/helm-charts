@@ -2,6 +2,14 @@ affinity: {}
 
 annotations: {}
 
+## Additional labels to add to all resources
+customLabels: {}
+
+dnsConfig: {}
+
+# Extra environment variables that will be passed into the exporter pod
+env: {}
+
 extraArgs:
   - --collect-all
 
@@ -20,12 +28,14 @@ livenessProbe:
     port: metrics
   initialDelaySeconds: 10
 
+# If the multi-target mode is enabled, this value will be ignored.
 # [mongodb[+srv]://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]
 mongodb:
   uri: "mongodb://mongodb:27017"
 
 # Name of an externally managed secret (in the same namespace) containing the connection uri as key `mongodb-uri`.
 # If this is provided, the value mongodb.uri is ignored.
+# If the multi-target mode is enabled, this value will be ignored.
 existingSecret:
   name: ""
   key: "mongodb-uri"
@@ -36,7 +46,8 @@ nodeSelector: {}
 
 podAnnotations: {}
 #  prometheus.io/scrape: "true"
-#  prometheus.io/port: "metrics"
+#  prometheus.io/port: "9216"
+#  prometheus.io/path: /metrics
 
 podLabels: {}
 
@@ -60,19 +71,17 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-# Extra environment variables that will be passed into the exporter pod
-env: {}
-
-# Volumes that will be mounted into the exporter pod
-volumeMounts: []
-
-# Volumes that will be attached to the exporter deployment
-volumes: []
+# Customize securityContext of the pod.
+# See https://kubernetes.io/docs/concepts/policy/security-context/ for more.
+podSecurityContext: {}
+  # seccompProfile:
+  #  type: RuntimeDefault
 
 securityContext:
   allowPrivilegeEscalation: false
   capabilities:
-    drop: ["all"]
+    drop:
+      - ALL
   readOnlyRootFilesystem: true
   runAsGroup: 10000
   runAsNonRoot: true
@@ -93,6 +102,28 @@ serviceAccount:
 
 serviceMonitor:
   enabled: false
+  multiTarget:
+    enabled: false
+    # The username and password must be the same for every target configured below
+    username: ""
+    password:
+      existingSecret:
+        name: ""
+        key: password
+      value: ""
+    targets: []
+    # Every target must have uri and name set
+    # - uri: "mongodb://mongodb-0.staging.internal:27017/admin"
+    #   name: "mongodb-0"
+    # - uri: "mongodb://mongodb-1.staging.internaltld:27017/admin"
+    #   name: "mongodb-1"
+    #   scrapeTimeout: 30s
+    #   interval: 60s
+    #   metricRelabelings:
+    #     - targetLabel: environment
+    #       replacement: staging
+    #       action: replace
+
   interval: 30s
   scrapeTimeout: 10s
   namespace:
@@ -103,3 +134,9 @@ serviceMonitor:
   tlsConfig: {}
 
 tolerations: []
+
+# Volumes that will be attached to the exporter deployment
+volumes: []
+
+# Volumes that will be mounted into the exporter pod
+volumeMounts: []

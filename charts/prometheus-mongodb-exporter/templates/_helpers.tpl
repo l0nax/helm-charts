@@ -40,6 +40,9 @@ helm.sh/chart: {{ include "prometheus-mongodb-exporter.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.customLabels }}
+{{ toYaml . }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -71,3 +74,14 @@ Determine secret name, can either be the self-created of an existing one
     {{ include "prometheus-mongodb-exporter.fullname" . }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Generate the MongoDB URI from the serviceMonitor multi-target list
+*/}}
+{{- define "prometheus-mongodb-exporter.mongodbUri" -}}
+{{- $uriList := list }}
+{{- range .Values.serviceMonitor.multiTarget.targets }}
+{{- $uriList = append $uriList (printf "%s" .uri ) }}
+{{- end }}
+{{- join "," $uriList }}
+{{- end }}

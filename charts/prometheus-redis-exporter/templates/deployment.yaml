@@ -5,7 +5,7 @@ metadata:
   labels:
 {{ include "prometheus-redis-exporter.labels" . | indent 4 }}
   annotations:
-{{ toYaml .Values.annotations | indent 8 }}
+{{ toYaml .Values.annotations | indent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -22,23 +22,34 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ template "prometheus-redis-exporter.serviceAccountName" . }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
       {{- if .Values.image.pullSecrets }}
       imagePullSecrets:
       {{- range .Values.image.pullSecrets }}
         - name: {{ . }}
       {{- end}}
       {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           args:
           {{- range $key, $value := .Values.extraArgs }}
             - --{{ $key }}={{ $value }}
           {{- end }}
+          {{- with .Values.securityContext }}
           securityContext:
-          {{- range $key, $value := .Values.securityContext }}
-            {{ $key }}: {{ $value }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
             - name: exporter-port
@@ -47,9 +58,13 @@ spec:
             - name: REDIS_ADDR
             {{- if .Values.redisAddressConfig.enabled }}
               valueFrom:
+              {{- if .Values.redisAddressConfig.isSecret }}
+                secretKeyRef:
+              {{- else }}
                 configMapKeyRef:
-                  name: {{ .Values.redisAddressConfig.configmap.name }}
-                  key: {{ .Values.redisAddressConfig.configmap.key }}
+              {{- end }}
+                  name: {{ .Values.redisAddressConfig.source.name }}
+                  key: {{ .Values.redisAddressConfig.source.key }}
             {{- else }}
               value: {{ .Values.redisAddress }}
             {{- end }}
