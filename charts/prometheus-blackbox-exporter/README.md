@@ -48,6 +48,16 @@ helm upgrade [RELEASE_NAME] [CHART] --install
 
 _See [helm upgrade](https://helm.sh/docs/helm/helm_upgrade/) for command documentation._
 
+### To 9.0.0
+
+This version remove pod security policy as it is deprecated.
+
+### To 8.0.0
+
+- The default image is set to `quay.io/prometheus/blackbox-exporter` instead `prom/blackbox-exporter`
+- `image.repository` is now split into `image.registry` and `image.repository`.
+  For the old behavior, set `image.registry` to an empty string and only use `image.repository`.
+
 ### To 7.0.0
 
 This version introduces the `securityContext` and `podSecurityContext` and removes `allowICMP`option.

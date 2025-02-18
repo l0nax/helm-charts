@@ -3,10 +3,7 @@ kind: Deployment
 metadata:
   name: {{ template "elasticsearch-exporter.fullname" . }}
   labels:
-    chart: {{ template "elasticsearch-exporter.chart" . }}
-    app: {{ template "elasticsearch-exporter.name" . }}
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+    {{- include "elasticsearch-exporter.labels" . | nindent 4 }}
   {{- with .Values.deployment.labels }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -16,10 +13,10 @@ metadata:
   {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   selector:
     matchLabels:
-      app: {{ template "elasticsearch-exporter.name" . }}
-      release: "{{ .Release.Name }}"
+      {{- include "elasticsearch-exporter.selectorLabels" . | nindent 6 }}
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -28,8 +25,7 @@ spec:
   template:
     metadata:
       labels:
-        app: {{ template "elasticsearch-exporter.name" . }}
-        release: "{{ .Release.Name }}"
+        {{- include "elasticsearch-exporter.labels" . | nindent 8 }}
       {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -38,15 +34,14 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      {{- if .Values.serviceAccount.create  }}
-      serviceAccountName: {{ template "elasticsearch-exporter.fullname" . }}
-      {{- else }}
-      serviceAccountName: {{ .Values.serviceAccount.name }}
-      {{- end }}
+      serviceAccountName: {{ template "elasticsearch-exporter.serviceAccountName" . }}
 {{- if .Values.priorityClassName }}
       priorityClassName: "{{ .Values.priorityClassName }}"
 {{- end }}
-      {{- include "elasticsearch-exporter.image.pullSecret.name" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
+      {{- if or .Values.global.imagePullSecrets .Values.image.pullSecret }}
+      imagePullSecrets:
+      {{- include "elasticsearch-exporter.imagePullSecrets" . | indent 8 }}
+      {{- end }}
       restartPolicy: {{ .Values.restartPolicy }}
       {{- with .Values.podSecurityContext }}
       securityContext:
@@ -75,7 +70,7 @@ spec:
           - secretRef:
               name: {{ .Values.envFromSecret }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{- include "elasticsearch-exporter.image.repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["elasticsearch_exporter",
                     {{- with .Values.log.format }}
@@ -99,14 +94,26 @@ spec:
                     {{- if .Values.es.indices_mappings }}
                     "--es.indices_mappings",
                     {{- end }}
+                    {{- if .Values.es.aliases }}
+                    "--es.aliases",
+                    {{- end }}
                     {{- if .Values.es.shards }}
                     "--es.shards",
                     {{- end }}
                     {{- if .Values.es.snapshots }}
-                    "--es.snapshots",
+                    "--collector.snapshots",
                     {{- end }}
                     {{- if .Values.es.cluster_settings }}
-                    "--es.cluster_settings",
+                    "--collector.clustersettings",
+                    {{- end }}
+                    {{- if .Values.es.slm }}
+                    "--es.slm",
+                    {{- end }}
+                    {{- if .Values.es.data_stream }}
+                    "--es.data_stream",
+                    {{- end }}
+                    {{- if .Values.es.ilm }}
+                    "--es.ilm",
                     {{- end }}
                     "--es.timeout={{ .Values.es.timeout }}",
                     {{- if .Values.es.sslSkipVerify }}
@@ -134,25 +141,25 @@ spec:
           {{- end }}
           ports:
             - containerPort: {{ .Values.service.httpPort }}
-              name: http
+              name: {{ .Values.service.metricsPort.name }}
           livenessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: {{ .Values.service.metricsPort.name }}
             initialDelaySeconds: 5
             timeoutSeconds: 5
             periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: {{ .Values.service.metricsPort.name }}
             initialDelaySeconds: 1
             timeoutSeconds: 5
             periodSeconds: 5
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/ash", "-c", "sleep 20"]
+                command: ["/bin/sleep", "20"]
           volumeMounts:
             {{- if and .Values.es.ssl.enabled (eq .Values.es.ssl.useExistingSecrets false) }}
             - mountPath: /ssl
@@ -168,16 +175,24 @@ spec:
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+      {{- with .Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
       {{- end }}
       {{- with .Values.affinity }}
       affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:

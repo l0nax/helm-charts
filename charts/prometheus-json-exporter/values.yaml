@@ -1,3 +1,4 @@
+---
 # Default values for prometheus-json-exporter.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -18,18 +19,20 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: true
   # Annotations to add to the service account
-  annotations: []
+  annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-podAnnotations: []
+# Annotations for the Deployment
+deploymentAnnotations: {}
+
+podAnnotations: {}
 
 podSecurityContext: {}
 # fsGroup: 2000
 
-# podLabels:
-  # Custom labels for the pod
+podLabels: {}
 
 securityContext: {}
 # capabilities:
@@ -39,11 +42,22 @@ securityContext: {}
 # runAsNonRoot: true
 # runAsUser: 1000
 
+livenessProbe:
+  httpGet:
+    path: /metrics
+    port: http
+readinessProbe:
+  httpGet:
+    path: /metrics
+    port: http
+
 service:
   type: ClusterIP
   port: 7979
   targetPort: http
   name: http
+  labels: {}
+  annotations: {}
 
 serviceMonitor:
   ## If true, a ServiceMonitor CRD is created for a prometheus operator
@@ -57,6 +71,7 @@ serviceMonitor:
   # Default values that will be used for all ServiceMonitors created by `targets`
   defaults:
     additionalMetricsRelabels: {}
+    additionalRelabels: []
     interval: 10s
     labels: {}
     scrapeTimeout: 30s
@@ -68,12 +83,14 @@ serviceMonitor:
 #      interval: 60s                    # Scraping interval. Overrides value set in `defaults`
 #      scrapeTimeout: 60s               # Scrape timeout. Overrides value set in `defaults`
 #      additionalMetricsRelabels: {}    # Map of metric labels and values to add
+#      additionalRelabels: []           # relabelings of metrics
 #      module: example_module           # Name of the module to pick up from `config.yaml` for scraping this target. Optional. Default is `default` provided by the exporter itself.
 
 ingress:
   enabled: false
   className: ""
-  annotations: []
+  labels: {}
+  annotations: {}
   # kubernetes.io/ingress.class: nginx
   # kubernetes.io/tls-acme: "true"
   hosts:
@@ -97,6 +114,19 @@ resources: {}
 # requests:
 #   cpu: 100m
 #   memory: 128Mi
+
+## Number of replicasets to retain ##
+## default value is 10, 0 will not retain any replicasets and make rollbacks impossible ##
+revisionHistoryLimit: 10
+
+environmentVariables: []
+  # - name: some-secret-variable
+  #   valueFrom:
+  #     secretKeyRef:
+  #       key: some-key
+  #       name: some-secret-name
+  # - name: some-other-variable
+  #   value: some-value
 
 autoscaling:
   enabled: false
@@ -159,6 +189,11 @@ configuration:
         #     #password: veryverysecret
         #     password_file: /tmp/mysecret.txt
 
+  # -- Structured configuration, takes precedence over `configuration.config`.
+  # Useful to be able to override specific configuration items, which is not possible with `configuration.config`.
+  # For instance: `--set configuration.structuredConfig.modules.test_module.http_client_config.basic_auth.username=foo`
+  structuredConfig: {}
+
 ## Custom PrometheusRules to be defined
 ## ref: https://github.com/coreos/prometheus-operator#customresourcedefinitions
 prometheusRule:
@@ -176,3 +211,26 @@ additionalVolumeMounts: []
   # - name: password-file
   #   mountPath: "/tmp/mysecret.txt"
   #   subPath: mysecret.txt
+
+## Additional init containers
+# These will be added to the prometheus-json-exporter pod.
+extraInitContainers: []
+  # - name: init-myservice
+  #   image: busybox:1.28
+  #   command: [ 'sh', '-c', "sleep 10; done" ]
+
+## Additional container arguments
+extraArgs: []
+#  - name: --config.file
+#    value: /app/config/myconfig.yml
+
+# Extra manifests to deploy as an array
+extraManifests: []
+  # - |
+  #   apiVersion: v1
+  #   kind: ConfigMap
+  #   metadata:
+  #   labels:
+  #     name: prometheus-json-exporter-extra
+  #   data:
+  #     extra-data: "value"

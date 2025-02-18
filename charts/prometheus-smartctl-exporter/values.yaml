@@ -1,6 +1,8 @@
 config: {}
 #  devices:
 #  - /dev/sda
+#  device_include: /dev/sd.*
+#  device_exclude: /dev/sr.*
 
 extraInstances: []
 # - config:
@@ -23,6 +25,10 @@ serviceMonitor:
   # Add Extra labels if needed. Prometeus operator may need them to find it.
   extraLabels: {}
   # release: prometheus-operator
+  interval: 60s
+  scrapeTimeout: 30s
+  # Set relabel_configs as per https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+  relabelings: []
 
 prometheusRules:
   enabled: false
@@ -34,9 +40,10 @@ prometheusRules:
 
 image:
   repository: quay.io/prometheuscommunity/smartctl-exporter
-  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -63,6 +70,10 @@ resources: {}
   #  cpu: 100m
   #  memory: 128Mi
 
+hostNetwork: false
+
+annotations: {}
+
 nodeSelector: {}
 
 tolerations:
@@ -74,3 +85,7 @@ affinity: {}
 service:
   type: ClusterIP
   port: 80
+  ipDualStack:
+    enabled: false
+    ipFamilies: ["IPv6", "IPv4"]
+    ipFamilyPolicy: "PreferDualStack"

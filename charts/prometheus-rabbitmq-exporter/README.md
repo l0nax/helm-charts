@@ -4,18 +4,23 @@ Prometheus Exporter for [RabbitMQ](https://www.rabbitmq.com/) metrics.
 
 This chart bootstraps a [RabbitMQ Exporter](https://github.com/kbudde/rabbitmq_exporter) deployment on a [Kubernetes](http://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
+## DEPRECATION WARNING
+
+The exporter used in this chart is deprecated and will not receive further updates!
+See: <https://github.com/kbudde/rabbitmq_exporter/issues/383>
+
 ## Prerequisites
 
 - Kubernetes 1.8+ with Beta APIs enabled
 
-## Get Repo Info
+## Get Repository Info
 
 ```console
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 ```
 
-_See [helm repo](https://helm.sh/docs/helm/helm_repo/) for command documentation._
+_See [`helm repo`](https://helm.sh/docs/helm/helm_repo/) for command documentation._
 
 ## Install Chart
 
@@ -54,7 +59,11 @@ $ helm upgrade [RELEASE_NAME] [CHART] --install
 
 _See [helm upgrade](https://helm.sh/docs/helm/helm_upgrade/) for command documentation._
 
-## Configuring
+### To 2.0.0
+
+From 2.0.0 rabbit exporter is using the prometheus-rabbit-exporter image 1.0.0.
+
+## Configuration
 
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments, visit the chart's [values.yaml](./values.yaml), or run these configuration commands:
 
